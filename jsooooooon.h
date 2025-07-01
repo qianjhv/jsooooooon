@@ -22,7 +22,7 @@ enum {
     JSON_PARSE_ROOT_NOT_SINGULAR
 };
 
-int json_parse(json_value* v, const char* json);
-json_type get_json_type(const json_value* v);
+int json_parse(json_value *v, const char *json);
+json_type get_json_type(const json_value *v);
 
 #endif
