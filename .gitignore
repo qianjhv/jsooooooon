@@ -1,9 +1,8 @@
-# 可执行文件
 *.out
 *.elf
 *.exe
+json_test
 
-# 编译中间文件
 *.o
 *.obj
 *.a
@@ -12,10 +11,8 @@
 *.dylib
 *.lo
 
-# 编译器生成的依赖文件
 *.d
 
-# 编译目录
 /build/
 /bin/
 /lib/
@@ -23,20 +20,17 @@
 /Debug/
 /Release/
 
-# CMake 生成文件
 CMakeCache.txt
 cmake_install.cmake
 CMakeFiles/
 /cmake-build-*/
 
-# Makefile 自动生成
 Makefile
 makefile
 Makefile.in
 Makefile.am
 *.dep
 
-# 编辑器/IDE 临时文件
 *~
 *.swp
 *.swo
@@ -44,25 +38,19 @@ Makefile.am
 *.tmp
 .DS_Store
 
-# VSCode 设置（可选）
 .vscode/
 
-# CLion 或 JetBrains IDE
 .idea/
 
-# 日志
 *.log
 
-# 测试输出
 test_output/
 *.gcda
 *.gcno
 *.gcov
 
-# 自动生成的文档
 doc/html/
 doc/latex/
 
-# 静态分析工具输出
 compile_commands.json
 
