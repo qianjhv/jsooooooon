@@ -25,6 +25,7 @@
 
 # CMake 生成文件
 CMakeCache.txt
+cmake_install.cmake
 CMakeFiles/
 /cmake-build-*/
 
