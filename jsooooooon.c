@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <errno.h>
+#include <math.h>
 #include "jsooooooon.h"
 
 #define EXPECT(c, ch)\
@@ -8,13 +10,21 @@
         c->json++;\
     } while(0)
 
+#define ISDIGIT(ch) ((ch) >= '0' && (ch) <= '9')
+#define ISDIGIT1TO9(ch) ((ch) >= '1' && (ch) <= '9')
+
 typedef struct {
     const char* json;
 } json_context;
 
-json_type get_json_type(const json_value *v) {
+json_type json_get_type(const json_value *v) {
     assert(v != NULL);
     return v->type;
+}
+
+double json_get_number(const json_value *v) {
+    assert(v != NULL && v->type == JSON_NUMBER);
+    return v->n;
 }
 
 static void json_parse_whitespace(json_context *c) {
@@ -25,49 +35,71 @@ static void json_parse_whitespace(json_context *c) {
     c->json = p;
 }
 
-static int json_parse_null(json_context *c, json_value *v) {
-    EXPECT(c, 'n');
-    if (c->json[0] != 'u' || c->json[1] != 'l' || c->json[2] != 'l') {
-        return JSON_PARSE_INVALID_VALUE;
-    } else if (c->json[3] != '\0') {
-        return JSON_PARSE_ROOT_NOT_SINGULAR;
-    }
-    c->json += 3;
-    v->type = JSON_NULL;
+static int json_parse_literal(json_context *c, json_value *v, const char *literal, json_type type) {
+    size_t i;
+    EXPECT(c, literal[0]);
+    for (i = 0; literal[i + 1]; i++)
+        if (c->json[i] != literal[i + 1])
+            return JSON_PARSE_INVALID_VALUE;
+    c->json += 1;
+    v->type = type;
     return JSON_PARSE_OK;
 }
 
-static int json_parse_true(json_context *c, json_value *v) {
-    EXPECT(c, 't');
-    if (c->json[0] != 'r' || c->json[1] != 'u' || c->json[2] != 'e') {
-        return JSON_PARSE_INVALID_VALUE;
-    } else if (c->json[3] != '\0') {
-        return JSON_PARSE_ROOT_NOT_SINGULAR;
-    }
-    c->json += 3;
-    v->type = JSON_TRUE;
-    return JSON_PARSE_OK;
-}
+static int json_parse_number(json_context *c, json_value *v) {
+    const char *p = c->json;
 
-static int json_parse_false(json_context *c, json_value *v) {
-    EXPECT(c, 'f');
-    if (c->json[0] != 'a' || c->json[1] != 'l' || c->json[2] != 's' || c->json[3] != 'e') {
-        return JSON_PARSE_INVALID_VALUE;
-    } else if (c->json[4] != '\0') {
-        return JSON_PARSE_ROOT_NOT_SINGULAR;
+    // optional '-'
+    int sign = 1;
+    if (*p == '-') {
+        sign = -1;
+        p++;
     }
-    c->json += 4;
-    v->type = JSON_FALSE;
+
+    // integer part
+    if (*p == '0') {
+        p++;
+        // leading zeros not allowed unless it's just "0"
+        if (ISDIGIT(*p)) return JSON_PARSE_INVALID_VALUE;
+    } else if (ISDIGIT(*p)) {
+        while (ISDIGIT(*p)) p++;
+    } else {
+        return JSON_PARSE_INVALID_VALUE; // must start with digit
+    }
+
+    // fractional part
+    if (*p == '.') {
+        p++;
+        if (!ISDIGIT(*p)) return JSON_PARSE_INVALID_VALUE; // must have digits after '.', not allowed 12.e
+        // if (!ISDIGIT(*p) && *p != 'e' && *p != 'E') return JSON_PARSE_INVALID_VALUE;
+        while (ISDIGIT(*p)) p++;
+    }
+
+    // exponent part
+    if (*p == 'e' || *p == 'E') {
+        p++;
+        if (*p == '+' || *p == '-') p++;
+        if (!ISDIGIT(*p)) return JSON_PARSE_INVALID_VALUE;
+        while (ISDIGIT(*p)) p++;
+    }
+    
+    errno = 0;
+    v->n = strtod(c->json, NULL);
+    if (errno == ERANGE && (v->n == HUGE_VAL || v->n == -HUGE_VAL))
+        return JSON_PARSE_NUMBER_OVERFLOW;
+
+    v->type = JSON_NUMBER;
+    c->json = p;
     return JSON_PARSE_OK;
 }
 
 static int json_parse_value(json_context *c, json_value *v) {
     switch (*c->json) {
-        case 'n': return json_parse_null(c, v);
-        case 't': return json_parse_true(c, v);
-        case 'f': return json_parse_false(c, v);
+        case 'n': return json_parse_literal(c, v, "null", JSON_NULL);
+        case 't': return json_parse_literal(c, v, "true", JSON_TRUE);
+        case 'f': return json_parse_literal(c, v, "false", JSON_FALSE);
         case '\0': return JSON_PARSE_EXPECT_VALUE;
-        default: return JSON_PARSE_INVALID_VALUE;
+        default: return json_parse_number(c, v);
     }
 }
 
