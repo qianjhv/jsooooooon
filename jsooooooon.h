@@ -1,6 +1,8 @@
 #ifndef JSOOOOOOON_H_
 #define JSOOOOOOON_H_
 
+#include <stddef.h>
+
 typedef enum {
     JSON_NULL,
     JSON_FALSE,
@@ -12,7 +14,10 @@ typedef enum {
 } json_type;
 
 typedef struct {
-    double n;
+    union {
+        struct { char* s; size_t len; } s;
+        double n;
+    } u;
     json_type type;
 } json_value;
 
@@ -21,11 +26,30 @@ enum {
     JSON_PARSE_EXPECT_VALUE,
     JSON_PARSE_INVALID_VALUE,
     JSON_PARSE_ROOT_NOT_SINGULAR,
-    JSON_PARSE_NUMBER_OVERFLOW
+    JSON_PARSE_NUMBER_OVERFLOW,
+    JSON_PARSE_MISS_QUOTATION_MARK,
+    JSON_PARSE_INVALID_STRING,
+    JSON_PARSE_INVALID_STRING_ESCAPE,
+    JSON_PARSE_INVALID_STRING_CHAR
 };
 
-int json_parse(json_value *v, const char *json);
-json_type json_get_type(const json_value *v);
-double json_get_number(const json_value *v);
+#define json_init(v) do { (v)->type = JSON_NULL; } while(0)
+
+int json_parse(json_value* v, const char* json);
+json_type json_get_type(const json_value* v);
+
+void json_free(json_value* v);
+
+#define json_set_null(v) json_free(v)
+
+int json_get_boolean(const json_value* v);
+void json_set_boolean(json_value* v, int b);
+
+double json_get_number(const json_value* v);
+void json_set_number(json_value* v, double n);
+
+const char* json_get_string(const json_value* v);
+size_t json_get_string_length(const json_value* v);
+void json_set_string(json_value* v, const char* s, size_t len);
 
 #endif

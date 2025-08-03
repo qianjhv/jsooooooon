@@ -38,6 +38,12 @@ static int test_pass = 0;
         EXPECT_EQ_DOUBLE(expect, json_get_number(&v));\
     } while (0)
 
+#define EXPECT_EQ_STRING(expect, actual, alength) \
+    EXPECT_EQ_BASE(sizeof(expect) - 1 == (alength) && memcmp(expect, actual, alength) == 0, expect, actual, "%s")
+
+#define EXPECT_TRUE(actual) EXPECT_EQ_BASE((actual) != 0, "true", "false", "%s")
+#define EXPECT_FALSE(actual) EXPECT_EQ_BASE((actual) == 0, "false", "true", "%s")
+
 static void test_parse_expect_value() {
     TEST_ERROR(JSON_PARSE_EXPECT_VALUE, "");
     TEST_ERROR(JSON_PARSE_EXPECT_VALUE, " ");
@@ -67,7 +73,7 @@ static void test_parse_false() {
 static void test_parse_root_not_singular() {
     json_value v;
     v.type = JSON_NULL;
-    EXPECT_EQ_INT(JSON_PARSE_ROOT_NOT_SINGULAR, json_parse(&v, "null x"));
+    EXPECT_EQ_INT(JSON_PARSE_ROOT_NOT_SINGULAR, json_parse(&v, "null x")); // cant pass
     EXPECT_EQ_INT(JSON_NULL, json_get_type(&v));
 }
 
@@ -109,6 +115,52 @@ static void test_parse_invalid_value() {
     TEST_ERROR(JSON_PARSE_INVALID_VALUE, "nan");
 }
 
+static void test_parse_invalid_string_escape() {
+#if 0
+    TEST_ERROR(JSON_PARSE_INVALID_STRING_ESCAPE, "\"\\v\"");
+    TEST_ERROR(JSON_PARSE_INVALID_STRING_ESCAPE, "\"\\'\"");
+    TEST_ERROR(JSON_PARSE_INVALID_STRING_ESCAPE, "\"\\0\"");
+    TEST_ERROR(JSON_PARSE_INVALID_STRING_ESCAPE, "\"\\x12\"");
+#endif
+}
+
+static void test_parse_invalid_string_char() {
+#if 0
+    TEST_ERROR(JSON_PARSE_INVALID_STRING_CHAR, "\"\x01\"");
+    TEST_ERROR(JSON_PARSE_INVALID_STRING_CHAR, "\"\x1F\"");
+#endif
+}
+
+static void test_access_boolean() {
+    json_value v;
+    json_init(&v);
+    json_set_string(&v, "a", 1);
+    json_set_boolean(&v, 1);
+    EXPECT_TRUE(json_get_boolean(&v));
+    json_set_boolean(&v, 0);
+    EXPECT_FALSE(json_get_boolean(&v));
+    json_free(&v);
+} 
+        
+static void test_access_number() {
+    json_value v;
+    json_init(&v);
+    json_set_string(&v, "a", 1);
+    json_set_number(&v, 1234.5);
+    EXPECT_EQ_DOUBLE(1234.5, json_get_number(&v));
+    json_free(&v);
+} 
+
+static void test_access_string() {
+    json_value v;
+    json_init(&v);
+    json_set_string(&v, "", 0);
+    EXPECT_EQ_STRING("", json_get_string(&v), json_get_string_length(&v));
+    json_set_string(&v, "Hello", 5);
+    EXPECT_EQ_STRING("Hello", json_get_string(&v), json_get_string_length(&v));
+    json_free(&v);
+}
+
 static void test_parse() {
     test_parse_null();
     test_parse_true();
@@ -117,6 +169,10 @@ static void test_parse() {
     test_parse_number();
     test_parse_invalid_value();
     test_number_overflow();
+
+    test_access_string();
+    test_access_boolean();
+    test_access_number();
 }
 
 int main(void) {
